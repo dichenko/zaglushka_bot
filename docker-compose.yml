@@ -1,0 +1,21 @@
+services:
+  app:
+    build: .
+    container_name: tg-bots-placeholder-app
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:17-alpine
+    container_name: tg-bots-placeholder-db
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

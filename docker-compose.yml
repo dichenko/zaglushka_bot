@@ -12,8 +12,10 @@ services:
     image: postgres:17-alpine
     container_name: tg-bots-placeholder-db
     restart: unless-stopped
-    env_file:
-      - .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-botlogger}
+      POSTGRES_USER: ${POSTGRES_USER:-botlogger}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-strong_password}
     volumes:
       - postgres_data:/var/lib/postgresql/data
 

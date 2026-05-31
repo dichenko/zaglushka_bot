@@ -11,15 +11,32 @@ const pool = new Pool({
   max: 10,
 });
 
+async function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export async function initDb(): Promise<void> {
-  try {
-    const client = await pool.connect();
-    await client.query("SELECT 1");
-    client.release();
-    logger.info("Connected to PostgreSQL");
-  } catch (err) {
-    logger.fatal({ err }, "Failed to connect to PostgreSQL");
-    process.exit(1);
+  const maxRetries = 10;
+  const retryDelayMs = 3000;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const client = await pool.connect();
+      await client.query("SELECT 1");
+      client.release();
+      logger.info("Connected to PostgreSQL");
+      return;
+    } catch (err) {
+      if (attempt === maxRetries) {
+        logger.fatal({ err }, "Failed to connect to PostgreSQL after max retries");
+        process.exit(1);
+      }
+      logger.warn(
+        { err, attempt, maxRetries },
+        `DB connection failed, retrying in ${retryDelayMs / 1000}s...`
+      );
+      await wait(retryDelayMs);
+    }
   }
 }
 

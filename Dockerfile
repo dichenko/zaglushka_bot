@@ -21,5 +21,6 @@ RUN npm ci --omit=dev
 
 COPY --from=builder /app/dist ./dist
 COPY src/migrations ./dist/migrations
+COPY scripts ./scripts
 
 CMD ["node", "dist/index.js"]

@@ -3,7 +3,7 @@ name: Deploy
 on:
   push:
     branches:
-      - main
+      - master
 
 jobs:
   deploy:
@@ -18,7 +18,8 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT }}
           script: |
-            cd /opt/tg-bots-placeholder
+            cd /opt/zaglushka_bot
+            git config --global --add safe.directory /opt/zaglushka_bot
             git pull
             docker compose up -d --build
             docker image prune -f

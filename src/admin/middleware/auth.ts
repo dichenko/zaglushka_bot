@@ -14,8 +14,15 @@ declare module 'express-session' {
 }
 
 export function requireAuth(req: Request, res: Response, next: NextFunction): void {
+  logger.info({
+    sessionID: req.sessionID,
+    isAuthenticated: req.session.isAuthenticated,
+    adminTgId: req.session.adminTgId,
+    cookie: req.headers.cookie,
+  }, 'Auth check');
+
   if (!req.session.isAuthenticated || !req.session.adminTgId) {
-    logger.warn({ sessionId: req.sessionID }, 'Unauthorized access attempt to admin panel');
+    logger.warn({ sessionID: req.sessionID, isAuth: req.session.isAuthenticated, tgId: req.session.adminTgId }, 'Unauthorized access attempt');
     res.redirect('/admin/login');
     return;
   }

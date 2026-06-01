@@ -28,8 +28,25 @@ export async function startAdminServer(): Promise<import('http').Server> {
       secure: process.env.NODE_ENV === 'production',
       httpOnly: true,
       maxAge: config.adminSessionMaxAge,
+      sameSite: 'lax',
     }
   }));
+
+  // Debug: log all requests with session/cookie info
+  app.use((req, _res, next) => {
+    logger.info({
+      sessionID: req.sessionID,
+      isAuth: req.session.isAuthenticated,
+      adminTgId: req.session.adminTgId,
+      cookie: req.headers.cookie,
+      protocol: req.protocol,
+      secure: req.secure,
+      hostname: req.hostname,
+      url: req.url,
+      method: req.method,
+    }, 'Request debug');
+    next();
+  });
 
   // View engine
   app.set('view engine', 'ejs');
@@ -41,6 +58,14 @@ export async function startAdminServer(): Promise<import('http').Server> {
   // Login route (no auth required)
   app.get('/admin/login', async (req, res) => {
     const token = req.query.token as string;
+
+    logger.info({
+      hasToken: !!token,
+      token: token?.substring(0, 8) + '...',
+      sessionID: req.sessionID,
+      'x-forwarded-proto': req.headers['x-forwarded-proto'],
+      'x-forwarded-for': req.headers['x-forwarded-for'],
+    }, 'Login route hit');
     
     if (!token) {
       return res.render('login', { error: 'No token provided' });
@@ -55,9 +80,16 @@ export async function startAdminServer(): Promise<import('http').Server> {
     // Create session
     req.session.adminTgId = tgId;
     req.session.isAuthenticated = true;
-    
-    logger.info({ tgId }, 'Admin logged in successfully');
-    res.redirect('/admin/prompt');
+
+    // Force save before redirect
+    req.session.save((err) => {
+      if (err) {
+        logger.error({ err }, 'Session save failed');
+        return res.render('login', { error: 'Session error. Please try again.' });
+      }
+      logger.info({ tgId, sessionID: req.sessionID }, 'Admin logged in, redirecting');
+      res.redirect('/admin/prompt');
+    });
   });
 
   // Logout route

@@ -5,6 +5,8 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    ports:
+      - "${ADMIN_PORT:-3001}:${ADMIN_PORT:-3001}"
     depends_on:
       - postgres
 

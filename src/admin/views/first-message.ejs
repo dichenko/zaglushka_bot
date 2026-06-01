@@ -1,0 +1,65 @@
+<%- include('layout', { title: 'First Message', body: `
+<div class="card">
+  <div class="card-body">
+    <form id="firstMessageForm">
+      <div class="mb-3">
+        <label for="messageText" class="form-label">First Message Text</label>
+        <textarea class="form-control" id="messageText" name="messageText" rows="10" required></textarea>
+        <div class="form-text">This message is automatically sent when a user starts a new conversation with /start command.</div>
+      </div>
+      
+      <div class="mb-3">
+        <button type="submit" class="btn btn-primary">Save Message</button>
+      </div>
+    </form>
+    
+    <div id="updateInfo" class="text-muted mt-3"></div>
+  </div>
+</div>
+
+<script>
+  // Load current message
+  async function loadMessage() {
+    try {
+      const response = await fetch('/api/admin/first-message');
+      const data = await response.json();
+      
+      if (data.success) {
+        document.getElementById('messageText').value = data.message;
+        document.getElementById('updateInfo').textContent = 'Updated: ' + new Date(data.updatedAt).toLocaleString();
+      }
+    } catch (error) {
+      console.error('Failed to load message:', error);
+    }
+  }
+  
+  // Save message
+  document.getElementById('firstMessageForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const messageText = document.getElementById('messageText').value;
+    
+    try {
+      const response = await fetch('/api/admin/first-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: messageText })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        alert('First message saved successfully!');
+        loadMessage();
+      } else {
+        alert('Error: ' + data.error);
+      }
+    } catch (error) {
+      alert('Failed to save message');
+    }
+  });
+  
+  // Load on page load
+  loadMessage();
+</script>
+` }) %>

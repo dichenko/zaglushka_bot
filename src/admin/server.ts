@@ -1,0 +1,93 @@
+import express from 'express';
+import session from 'express-session';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { config, logger } from '../config.js';
+import { requireAuth } from './middleware/auth.js';
+import { processAdminLogin } from './auth.js';
+import apiRouter from './routes/api.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+export async function startAdminServer(): Promise<import('http').Server> {
+  const app = express();
+
+  // Middleware
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
+  
+  // Session configuration
+  app.use(session({
+    secret: config.adminSessionSecret,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: true,
+      maxAge: config.adminSessionMaxAge,
+    }
+  }));
+
+  // View engine
+  app.set('view engine', 'ejs');
+  app.set('views', path.join(__dirname, 'views'));
+
+  // Static files
+  app.use('/admin/static', express.static(path.join(__dirname, 'public')));
+
+  // Login route (no auth required)
+  app.get('/admin/login', async (req, res) => {
+    const token = req.query.token as string;
+    
+    if (!token) {
+      return res.render('login', { error: 'No token provided' });
+    }
+
+    const tgId = await processAdminLogin(token);
+    
+    if (!tgId) {
+      return res.render('login', { error: 'Invalid or expired token' });
+    }
+
+    // Create session
+    req.session.adminTgId = tgId;
+    req.session.isAuthenticated = true;
+    
+    logger.info({ tgId }, 'Admin logged in successfully');
+    res.redirect('/admin/prompt');
+  });
+
+  // Logout route
+  app.get('/admin/logout', (req, res) => {
+    req.session.destroy(() => {
+      res.redirect('/admin/login');
+    });
+  });
+
+  // Protected routes
+  app.get('/admin/prompt', requireAuth, (req, res) => {
+    res.render('prompt', { title: 'System Prompt' });
+  });
+
+  app.get('/admin/first-message', requireAuth, (req, res) => {
+    res.render('first-message', { title: 'First Message' });
+  });
+
+  app.get('/admin/bots', requireAuth, (req, res) => {
+    res.render('bots', { title: 'Telegram Bots' });
+  });
+
+  app.get('/admin/conversations', requireAuth, (req, res) => {
+    res.render('conversations', { title: 'Conversation History' });
+  });
+
+  // API routes
+  app.use('/api/admin', apiRouter);
+
+  // Start server
+  const server = app.listen(config.adminPort, () => {
+    logger.info({ port: config.adminPort }, 'Admin panel started');
+  });
+
+  return server;
+}

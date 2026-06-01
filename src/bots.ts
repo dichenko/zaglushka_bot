@@ -1,73 +1,186 @@
 import { Bot } from "grammy";
 import { config, logger } from "./config.js";
-import { upsertBotContact } from "./db.js";
+import { 
+  upsertBotContact, 
+  getActiveBots, 
+  getActiveFirstMessage,
+  syncBotLink 
+} from "./db.js";
+import { handleTextMessage } from "./handlers/message.js";
+import { handleVoiceMessage } from "./handlers/voice.js";
+import { generateAdminLoginLink } from "./admin/auth.js";
 
 interface BotInfo {
   bot: Bot;
   token: string;
   botLink: string;
+  id: number;
 }
 
 export async function startBots(): Promise<void> {
-  const tokens = config.botTokens;
+  // Get active bots from database
+  const botConfigs = await getActiveBots();
+  
+  if (botConfigs.length === 0) {
+    logger.warn('No active bots found in database. Please configure bots via admin panel.');
+    return;
+  }
 
-  for (let i = 0; i < tokens.length; i++) {
-    const token = tokens[i];
-    const tokenPreview =
-      token.length > 20 ? token.slice(0, 10) + "..." + token.slice(-6) : token;
+  logger.info({ count: botConfigs.length }, 'Starting bots from database');
+
+  const activeBots: BotInfo[] = [];
+
+  for (const botConfig of botConfigs) {
+    const tokenPreview = botConfig.token.length > 20 
+      ? botConfig.token.slice(0, 10) + "..." + botConfig.token.slice(-6) 
+      : botConfig.token;
 
     try {
-      const bot = new Bot(token);
+      const bot = new Bot(botConfig.token);
 
+      // Delete webhook
       await bot.api.deleteWebhook();
-      logger.info(`[Bot ${i + 1}/${tokens.length}] Webhook deleted`);
+      logger.info(`[Bot ${botConfig.id}] Webhook deleted`);
 
+      // Drop pending updates if configured
       if (config.dropPendingUpdates) {
         await bot.api.getUpdates({
           offset: -1,
           timeout: 1,
         });
-        logger.info(`[Bot ${i + 1}/${tokens.length}] Pending updates dropped`);
+        logger.info(`[Bot ${botConfig.id}] Pending updates dropped`);
       }
 
+      // Get bot info
       const me = await bot.api.getMe();
       const botLink = `https://t.me/${me.username}`;
-      logger.info(
-        `[Bot ${i + 1}/${tokens.length}] @${me.username} ready (token: ${tokenPreview})`
-      );
+      
+      // Update bot_link in database
+      await syncBotLink(botConfig.id, botLink);
+      
+      logger.info(`[Bot ${botConfig.id}] @${me.username} ready (token: ${tokenPreview})`);
 
-      bot.on("message", async (ctx) => {
+      // /start command handler
+      bot.command("start", async (ctx) => {
         const tgId = ctx.from?.id;
         if (!tgId) return;
 
         try {
-          await upsertBotContact({ tgId, botLink });
-        } catch (err) {
-          logger.error({ err, tgId, botLink }, "Failed to upsert contact");
-        }
+          // Save contact
+          await upsertBotContact({ 
+            tgId, 
+            botLink,
+            username: ctx.from.username,
+            firstName: ctx.from.first_name,
+            lastName: ctx.from.last_name,
+          });
 
-        try {
-          await ctx.reply(config.autoReplyMessage);
+          // Get first message from database
+          const firstMessage = await getActiveFirstMessage();
+          const message = firstMessage || "Здравствуйте! Чем могу помочь?";
+          
+          await ctx.reply(message);
+          
+          logger.info({ tgId, botLink }, 'Start command handled');
         } catch (err) {
-          logger.error({ err, tgId, botLink }, "Failed to send reply");
+          logger.error({ err, tgId, botLink }, "Failed to handle /start command");
         }
       });
 
+      // /admin command handler
+      bot.command("admin", async (ctx) => {
+        const tgId = ctx.from?.id;
+        if (!tgId) {
+          return ctx.reply("Ошибка: не удалось определить ваш Telegram ID");
+        }
+
+        try {
+          // Check if user is admin
+          const adminTgIds = config.adminTgIds.map(id => parseInt(id));
+          if (!adminTgIds.includes(tgId)) {
+            return ctx.reply("У вас нет доступа к админ-панели");
+          }
+
+          // Generate login link
+          const loginLink = await generateAdminLoginLink(tgId);
+          
+          await ctx.reply(
+            `🔐 Ваша ссылка для входа в админ-панель:\n\n${loginLink}\n\n` +
+            `⚠️ Ссылка действительна 1 час и может быть использована только один раз.`
+          );
+          
+          logger.info({ tgId }, 'Admin login link generated');
+        } catch (err) {
+          logger.error({ err, tgId }, "Failed to generate admin login link");
+          await ctx.reply("Произошла ошибка. Пожалуйста, попробуйте позже.");
+        }
+      });
+
+      // Text message handler
+      bot.on("message:text", async (ctx) => {
+        const tgId = ctx.from?.id;
+        if (!tgId) return;
+
+        try {
+          // Save contact
+          await upsertBotContact({ 
+            tgId, 
+            botLink,
+            username: ctx.from.username,
+            firstName: ctx.from.first_name,
+            lastName: ctx.from.last_name,
+          });
+
+          // Handle with AI agent
+          await handleTextMessage(ctx, { botLink });
+        } catch (err) {
+          logger.error({ err, tgId, botLink }, "Failed to handle text message");
+        }
+      });
+
+      // Voice message handler
+      bot.on("message:voice", async (ctx) => {
+        const tgId = ctx.from?.id;
+        if (!tgId) return;
+
+        try {
+          // Save contact
+          await upsertBotContact({ 
+            tgId, 
+            botLink,
+            username: ctx.from.username,
+            firstName: ctx.from.first_name,
+            lastName: ctx.from.last_name,
+          });
+
+          // Handle with AI agent + STT
+          await handleVoiceMessage(ctx, { botLink });
+        } catch (err) {
+          logger.error({ err, tgId, botLink }, "Failed to handle voice message");
+        }
+      });
+
+      // Start polling
       bot.start({
         drop_pending_updates: config.dropPendingUpdates,
       });
 
-      logger.info(
-        `[Bot ${i + 1}/${tokens.length}] Polling started for ${botLink}`
-      );
+      activeBots.push({
+        bot,
+        token: botConfig.token,
+        botLink,
+        id: botConfig.id,
+      });
+
+      logger.info(`[Bot ${botConfig.id}] Polling started for ${botLink}`);
     } catch (err) {
       logger.error(
         { err },
-        `[Bot ${i + 1}/${tokens.length}] Failed to start (token: ${tokenPreview})`
+        `[Bot ${botConfig.id}] Failed to start (token: ${tokenPreview})`
       );
     }
   }
 
-  const started = tokens.length;
-  logger.info(`All ${started} bots processed`);
+  const started = activeBots.length;
+  logger.info({ started, total: botConfigs.length }, 'All bots processed');
 }

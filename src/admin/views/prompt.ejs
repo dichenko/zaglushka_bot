@@ -1,0 +1,65 @@
+<%- include('layout', { title: 'System Prompt', body: `
+<div class="card">
+  <div class="card-body">
+    <form id="promptForm">
+      <div class="mb-3">
+        <label for="promptText" class="form-label">System Prompt</label>
+        <textarea class="form-control" id="promptText" name="promptText" rows="20" required></textarea>
+        <div class="form-text">This prompt is sent to LLM with every request. Changes apply immediately.</div>
+      </div>
+      
+      <div class="mb-3">
+        <button type="submit" class="btn btn-primary">Save Prompt</button>
+      </div>
+    </form>
+    
+    <div id="versionInfo" class="text-muted mt-3"></div>
+  </div>
+</div>
+
+<script>
+  // Load current prompt
+  async function loadPrompt() {
+    try {
+      const response = await fetch('/api/admin/prompt');
+      const data = await response.json();
+      
+      if (data.success) {
+        document.getElementById('promptText').value = data.prompt;
+        document.getElementById('versionInfo').textContent = 'Version: ' + data.version + ' | Updated: ' + new Date(data.createdAt).toLocaleString();
+      }
+    } catch (error) {
+      console.error('Failed to load prompt:', error);
+    }
+  }
+  
+  // Save prompt
+  document.getElementById('promptForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const promptText = document.getElementById('promptText').value;
+    
+    try {
+      const response = await fetch('/api/admin/prompt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: promptText })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        alert('Prompt saved successfully!');
+        loadPrompt();
+      } else {
+        alert('Error: ' + data.error);
+      }
+    } catch (error) {
+      alert('Failed to save prompt');
+    }
+  });
+  
+  // Load on page load
+  loadPrompt();
+</script>
+` }) %>

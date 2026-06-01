@@ -27,6 +27,12 @@ interface AppConfig {
   // STT
   muxlisaBaseUrl: string;
   muxlisaApiKey: string;
+  muxlisaSttTimeoutMs: number;
+  muxlisaTtsTimeoutMs: number;
+  muxlisaMaxAudioSizeMb: number;
+  muxlisaMaxAudioDurationSec: number;
+  muxlisaTtsMaxChars: number;
+  muxlisaTtsSpeaker: number;
   openaiSttModel: string;
   openaiApiKey: string;
   sttFallbackConfidenceThreshold: number;
@@ -94,6 +100,12 @@ function loadConfig(): AppConfig {
   // STT Configuration - MUXLISA
   const muxlisaBaseUrl = process.env.MUXLISA_BASE_URL || "https://service.muxlisa.uz";
   const muxlisaApiKey = process.env.MUXLISA_API_KEY || "";
+  const muxlisaSttTimeoutMs = parseInt(process.env.MUXLISA_STT_TIMEOUT_MS || "60000");
+  const muxlisaTtsTimeoutMs = parseInt(process.env.MUXLISA_TTS_TIMEOUT_MS || "60000");
+  const muxlisaMaxAudioSizeMb = parseInt(process.env.MUXLISA_MAX_AUDIO_SIZE_MB || "5");
+  const muxlisaMaxAudioDurationSec = parseInt(process.env.MUXLISA_MAX_AUDIO_DURATION_SEC || "60");
+  const muxlisaTtsMaxChars = parseInt(process.env.MUXLISA_TTS_MAX_CHARS || "1512");
+  const muxlisaTtsSpeaker = parseInt(process.env.MUXLISA_TTS_SPEAKER || "0");
 
   // STT Configuration - OpenAI
   const openaiSttModel = process.env.OPENAI_STT_MODEL || "gpt-4o-transcribe";
@@ -138,6 +150,12 @@ function loadConfig(): AppConfig {
     llmModel,
     muxlisaBaseUrl,
     muxlisaApiKey,
+    muxlisaSttTimeoutMs,
+    muxlisaTtsTimeoutMs,
+    muxlisaMaxAudioSizeMb,
+    muxlisaMaxAudioDurationSec,
+    muxlisaTtsMaxChars,
+    muxlisaTtsSpeaker,
     openaiSttModel,
     openaiApiKey,
     sttFallbackConfidenceThreshold,

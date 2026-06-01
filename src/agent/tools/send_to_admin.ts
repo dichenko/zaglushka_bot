@@ -1,7 +1,7 @@
 import { DynamicStructuredTool } from '@langchain/core/tools';
 import { z } from 'zod';
-import { config, logger } from '../config.js';
-import { createLead, closeConversation } from '../db.js';
+import { config, logger } from '../../config.js';
+import { createLead, closeConversation } from '../../db.js';
 
 // Telegram Bot API instance (will be injected)
 let botApi: any = null;
@@ -25,25 +25,20 @@ export const sendToAdminTool = new DynamicStructuredTool({
     username: z.string().describe('Username пользователя в Telegram (без @)'),
     telegram_link: z.string().describe('Ссылка на профиль Telegram (https://t.me/username)'),
   }),
-  func: async ({ summary, contacts, username, telegram_link }) => {
+  func: async (input: unknown) => {
+    const { summary, contacts, username, telegram_link } = input as {
+      summary: string;
+      contacts: string;
+      username: string;
+      telegram_link: string;
+    };
     try {
       if (!botApi) {
         throw new Error('Bot API not initialized');
       }
 
-      // Format message for admin chat
-      const message = `📩 Новая заявка от @${username}
+      const message = `📩 Новая заявка от @${username}\n\n👤 Контакты:\n${contacts || 'Не предоставлены'}\n\n📝 Резюме:\n${summary}\n\n🔗 Профиль: ${telegram_link}\n⏰ Время: ${new Date().toLocaleString('ru-RU')}`;
 
-👤 Контакты:
-${contacts || 'Не предоставлены'}
-
-📝 Резюме:
-${summary}
-
-🔗 Профиль: ${telegram_link}
-⏰ Время: ${new Date().toLocaleString('ru-RU')}`;
-
-      // Send message to admin chat
       const sentMessage = await botApi.sendMessage(config.adminChatId, message, {
         parse_mode: 'HTML',
       });

@@ -12,7 +12,7 @@ export async function transcribeWithOpenAI(
 ): Promise<{ text: string; confidence: number }> {
   try {
     const formData = new FormData();
-    const blob = new Blob([audioBuffer], { type: 'audio/wav' });
+    const blob = new Blob([new Uint8Array(audioBuffer)], { type: 'audio/wav' });
     formData.append('file', blob, 'audio.wav');
     formData.append('model', config.openaiSttModel);
     

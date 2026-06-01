@@ -8,12 +8,24 @@ import { logger } from '../config.js';
  * Loads and saves conversation history from database
  */
 export class PostgresChatMessageHistory extends BaseChatMessageHistory {
+  lc_namespace = ['postgres', 'chat_history'];
+
   private conversationId: string;
   private messages: BaseMessage[] = [];
 
   constructor(conversationId: string) {
     super();
     this.conversationId = conversationId;
+  }
+
+  async addUserMessage(message: string): Promise<void> {
+    const msg = new HumanMessage(message);
+    await this.addMessage(msg);
+  }
+
+  async addAIChatMessage(message: string): Promise<void> {
+    const msg = new AIMessage(message);
+    await this.addMessage(msg);
   }
 
   /**

@@ -64,15 +64,16 @@ export async function startBots(): Promise<void> {
       bot.command("start", async (ctx) => {
         const tgId = ctx.from?.id;
         if (!tgId) return;
+        const from = ctx.from!;
 
         try {
           // Save contact
           await upsertBotContact({ 
             tgId, 
             botLink,
-            username: ctx.from.username,
-            firstName: ctx.from.first_name,
-            lastName: ctx.from.last_name,
+            username: from.username,
+            firstName: from.first_name,
+            lastName: from.last_name,
           });
 
           // Get first message from database
@@ -120,15 +121,16 @@ export async function startBots(): Promise<void> {
       bot.on("message:text", async (ctx) => {
         const tgId = ctx.from?.id;
         if (!tgId) return;
+        const from = ctx.from!;
 
         try {
           // Save contact
           await upsertBotContact({ 
             tgId, 
             botLink,
-            username: ctx.from.username,
-            firstName: ctx.from.first_name,
-            lastName: ctx.from.last_name,
+            username: from.username,
+            firstName: from.first_name,
+            lastName: from.last_name,
           });
 
           // Handle with AI agent
@@ -142,15 +144,16 @@ export async function startBots(): Promise<void> {
       bot.on("message:voice", async (ctx) => {
         const tgId = ctx.from?.id;
         if (!tgId) return;
+        const from = ctx.from!;
 
         try {
           // Save contact
           await upsertBotContact({ 
             tgId, 
             botLink,
-            username: ctx.from.username,
-            firstName: ctx.from.first_name,
-            lastName: ctx.from.last_name,
+            username: from.username,
+            firstName: from.first_name,
+            lastName: from.last_name,
           });
 
           // Handle with AI agent + STT

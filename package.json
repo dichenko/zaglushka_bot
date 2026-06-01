@@ -17,6 +17,7 @@
     "tsx": "^4.19.0",
     "@langchain/core": "^0.3.80",
     "@langchain/openai": "^0.5.16",
+    "@langchain/langgraph": "^0.2.0",
     "langchain": "^0.3.29",
     "@langchain/community": "^1.1.29",
     "fluent-ffmpeg": "^2.1.3",

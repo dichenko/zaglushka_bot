@@ -22,10 +22,10 @@ function convertOggToWav(oggBuffer: Buffer): Promise<Buffer> {
         const wavBuffer = Buffer.concat(chunks);
         resolve(wavBuffer);
       })
-      .on('error', (err) => {
+      .on('error', (err: Error) => {
         reject(err);
       })
-      .pipeToStream()
+      .pipe()
       .on('data', (chunk: Buffer) => {
         chunks.push(chunk);
       });

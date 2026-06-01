@@ -24,8 +24,8 @@ CREATE TABLE IF NOT EXISTS system_prompts (
   created_by BIGINT -- tg_id of admin who created it
 );
 
-CREATE INDEX idx_system_prompts_active ON system_prompts(is_active);
-CREATE INDEX idx_system_prompts_version ON system_prompts(version DESC);
+CREATE INDEX IF NOT EXISTS idx_system_prompts_active ON system_prompts(is_active);
+CREATE INDEX IF NOT EXISTS idx_system_prompts_version ON system_prompts(version DESC);
 
 -- 3. first_messages - First message for new users
 CREATE TABLE IF NOT EXISTS first_messages (
@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS first_messages (
 );
 
 -- Only one active record allowed
-CREATE UNIQUE INDEX idx_first_messages_active ON first_messages(is_active) WHERE is_active = true;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_first_messages_active ON first_messages(is_active) WHERE is_active = true;
 
 -- 4. admin_tokens - Temporary tokens for admin panel access
 CREATE TABLE IF NOT EXISTS admin_tokens (
@@ -49,8 +49,8 @@ CREATE TABLE IF NOT EXISTS admin_tokens (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_admin_tokens_token ON admin_tokens(token);
-CREATE INDEX idx_admin_tokens_expires ON admin_tokens(expires_at);
+CREATE INDEX IF NOT EXISTS idx_admin_tokens_token ON admin_tokens(token);
+CREATE INDEX IF NOT EXISTS idx_admin_tokens_expires ON admin_tokens(expires_at);
 
 -- 5. conversations - Dialog sessions
 CREATE TABLE IF NOT EXISTS conversations (
@@ -67,9 +67,9 @@ CREATE TABLE IF NOT EXISTS conversations (
     REFERENCES bot_contacts(tg_id, bot_link)
 );
 
-CREATE INDEX idx_conversations_tg_id ON conversations(tg_id);
-CREATE INDEX idx_conversations_status ON conversations(status);
-CREATE INDEX idx_conversations_updated ON conversations(updated_at);
+CREATE INDEX IF NOT EXISTS idx_conversations_tg_id ON conversations(tg_id);
+CREATE INDEX IF NOT EXISTS idx_conversations_status ON conversations(status);
+CREATE INDEX IF NOT EXISTS idx_conversations_updated ON conversations(updated_at);
 
 -- 6. messages - All message history
 CREATE TABLE IF NOT EXISTS messages (
@@ -84,8 +84,8 @@ CREATE TABLE IF NOT EXISTS messages (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_messages_conversation ON messages(conversation_id);
-CREATE INDEX idx_messages_created ON messages(created_at);
+CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_messages_created ON messages(created_at);
 
 -- 7. leads - Submitted leads
 CREATE TABLE IF NOT EXISTS leads (
@@ -101,8 +101,8 @@ CREATE TABLE IF NOT EXISTS leads (
   sent_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_leads_conversation ON leads(conversation_id);
-CREATE INDEX idx_leads_sent ON leads(sent_at);
+CREATE INDEX IF NOT EXISTS idx_leads_conversation ON leads(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_leads_sent ON leads(sent_at);
 
 -- Update bot_contacts with new fields
 ALTER TABLE bot_contacts 

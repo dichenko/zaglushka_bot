@@ -12,6 +12,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export async function startAdminServer(): Promise<import('http').Server> {
   const app = express();
 
+  // Trust reverse proxy (Caddy) for secure cookies
+  app.set('trust proxy', 1);
+
   // Middleware
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));

@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS bot_configs (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_bot_configs_active ON bot_configs(is_active);
+CREATE INDEX IF NOT EXISTS idx_bot_configs_active ON bot_configs(is_active);
 
 -- 2. system_prompts - Versioned system prompts
 CREATE TABLE IF NOT EXISTS system_prompts (

@@ -50,12 +50,15 @@ export async function runMigrations(): Promise<void> {
   try {
     await pool.query(sql001);
     logger.info("Migration 001_init applied");
-    
+  } catch (err) {
+    logger.error({ err }, "Failed to apply migration 001_init");
+  }
+
+  try {
     await pool.query(sql002);
     logger.info("Migration 002_ai_agent applied");
   } catch (err) {
-    logger.fatal({ err }, "Failed to apply migration");
-    process.exit(1);
+    logger.error({ err }, "Failed to apply migration 002_ai_agent");
   }
 }
 

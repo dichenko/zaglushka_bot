@@ -1,152 +1,42 @@
-<%- include('layout', { title: 'Telegram Bots', body: `
-<div class="card mb-4">
-  <div class="card-body">
-    <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addBotModal">Add New Bot</button>
-    <div class="alert alert-warning mt-3">
-      <strong>Note:</strong> After adding or modifying bots, you need to restart Docker for changes to take effect.
-    </div>
-  </div>
-</div>
-
-<div class="card">
-  <div class="card-body">
-    <table class="table table-striped">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Token</th>
-          <th>Bot Link</th>
-          <th>Name</th>
-          <th>Description</th>
-          <th>Status</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody id="botsTableBody">
-        <tr><td colspan="7" class="text-center">Loading...</td></tr>
-      </tbody>
-    </table>
-  </div>
-</div>
-
-<!-- Add Bot Modal -->
-<div class="modal fade" id="addBotModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Add New Bot</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <form id="addBotForm">
-          <div class="mb-3">
-            <label for="botToken" class="form-label">Bot Token</label>
-            <input type="text" class="form-control" id="botToken" required placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11">
-          </div>
-          <div class="mb-3">
-            <label for="botName" class="form-label">Bot Name (optional)</label>
-            <input type="text" class="form-control" id="botName">
-          </div>
-          <div class="mb-3">
-            <label for="botDescription" class="form-label">Description (optional)</label>
-            <textarea class="form-control" id="botDescription" rows="3"></textarea>
-          </div>
-          <button type="submit" class="btn btn-primary">Add Bot</button>
-        </form>
-      </div>
-    </div>
-  </div>
-</div>
-
+<!DOCTYPE html>
+<html lang="ru">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Panel - TG Bots</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>body{padding-top:20px}.sidebar{min-height:100vh;background:#f8f9fa}.nav-link.active{background:#0d6efd;color:white}</style>
+</head>
+<body>
+<div class="container-fluid"><div class="row">
+<div class="col-md-2 sidebar p-3">
+<h5>Admin Panel</h5><hr><ul class="nav flex-column">
+<li class="nav-item"><a class="nav-link" href="/admin/prompt">System Prompt</a></li>
+<li class="nav-item"><a class="nav-link" href="/admin/first-message">First Message</a></li>
+<li class="nav-item"><a class="nav-link active" href="/admin/bots">TG Bots</a></li>
+<li class="nav-item"><a class="nav-link" href="/admin/conversations">Conversations</a></li>
+<li class="nav-item mt-3"><a class="nav-link text-danger" href="/admin/logout">Logout</a></li>
+</ul></div>
+<div class="col-md-10 p-4">
+<h2>TG Bots</h2><hr>
+<div class="card mb-4"><div class="card-body">
+<button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addBotModal">Add New Bot</button>
+<div class="alert alert-warning mt-3"><strong>Note:</strong> After adding or modifying bots, you need to restart Docker for changes to take effect.</div>
+</div></div>
+<div class="card"><div class="card-body">
+<table class="table table-striped"><thead><tr><th>ID</th><th>Token</th><th>Bot Link</th><th>Name</th><th>Description</th><th>Status</th><th>Actions</th></tr></thead>
+<tbody id="botsTableBody"><tr><td colspan="7" class="text-center">Loading...</td></tr></tbody></table></div></div>
+<div class="modal fade" id="addBotModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+<div class="modal-header"><h5 class="modal-title">Add New Bot</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+<div class="modal-body"><form id="addBotForm">
+<div class="mb-3"><label for="botToken" class="form-label">Bot Token</label><input type="text" class="form-control" id="botToken" required></div>
+<div class="mb-3"><label for="botName" class="form-label">Bot Name (optional)</label><input type="text" class="form-control" id="botName"></div>
+<div class="mb-3"><label for="botDescription" class="form-label">Description (optional)</label><textarea class="form-control" id="botDescription" rows="3"></textarea></div>
+<button type="submit" class="btn btn-primary">Add Bot</button></form></div></div></div></div>
+</div></div></div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-  // Load bots
-  async function loadBots() {
-    try {
-      const response = await fetch('/api/admin/bots');
-      const data = await response.json();
-      
-      if (data.success) {
-        const tbody = document.getElementById('botsTableBody');
-        if (data.bots.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="7" class="text-center">No bots configured</td></tr>';
-        } else {
-          tbody.innerHTML = data.bots.map(bot => {
-            const maskedToken = bot.token.substring(0, 10) + '...' + bot.token.substring(bot.token.length - 5);
-            const botLink = bot.bot_link ? '<a href="' + bot.bot_link + '" target="_blank">' + bot.bot_link + '</a>' : 'Not set';
-            const status = bot.is_active ? '<span class="badge bg-success">Active</span>' : '<span class="badge bg-danger">Inactive</span>';
-            
-            return '<tr>' +
-              '<td>' + bot.id + '</td>' +
-              '<td><code>' + maskedToken + '</code></td>' +
-              '<td>' + botLink + '</td>' +
-              '<td>' + (bot.bot_name || '-') + '</td>' +
-              '<td>' + (bot.bot_description || '-') + '</td>' +
-              '<td>' + status + '</td>' +
-              '<td>' +
-                '<button class="btn btn-sm btn-danger" onclick="deleteBot(' + bot.id + ')">Delete</button>' +
-              '</td>' +
-            '</tr>';
-          }).join('');
-        }
-      }
-    } catch (error) {
-      console.error('Failed to load bots:', error);
-    }
-  }
-  
-  // Add bot
-  document.getElementById('addBotForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const token = document.getElementById('botToken').value;
-    const botName = document.getElementById('botName').value;
-    const botDescription = document.getElementById('botDescription').value;
-    
-    try {
-      const response = await fetch('/api/admin/bots', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, botName, botDescription })
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        alert('Bot added successfully! Restart Docker to apply changes.');
-        loadBots();
-        bootstrap.Modal.getInstance(document.getElementById('addBotModal')).hide();
-        document.getElementById('addBotForm').reset();
-      } else {
-        alert('Error: ' + data.error);
-      }
-    } catch (error) {
-      alert('Failed to add bot');
-    }
-  });
-  
-  // Delete bot
-  async function deleteBot(id) {
-    if (!confirm('Are you sure you want to delete this bot?')) return;
-    
-    try {
-      const response = await fetch('/api/admin/bots/' + id, {
-        method: 'DELETE'
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        alert('Bot deleted successfully! Restart Docker to apply changes.');
-        loadBots();
-      } else {
-        alert('Error: ' + data.error);
-      }
-    } catch (error) {
-      alert('Failed to delete bot');
-    }
-  }
-  
-  // Load on page load
-  loadBots();
+async function loadBots(){try{const r=await fetch('/api/admin/bots');const d=await r.json();if(d.success){const tb=document.getElementById('botsTableBody');if(d.bots.length===0){tb.innerHTML='<tr><td colspan="7" class="text-center">No bots configured</td></tr>'}else{tb.innerHTML=d.bots.map(b=>'<tr><td>'+b.id+'</td><td><code>'+b.token.substring(0,10)+'...'+b.token.substring(b.token.length-5)+'</code></td><td>'+(b.bot_link?'<a href="'+b.bot_link+'" target="_blank">'+b.bot_link+'</a>':'Not set')+'</td><td>'+(b.bot_name||'-')+'</td><td>'+(b.bot_description||'-')+'</td><td>'+(b.is_active?'<span class="badge bg-success">Active</span>':'<span class="badge bg-danger">Inactive</span>')+'</td><td><button class="btn btn-sm btn-danger" onclick="deleteBot('+b.id+')">Delete</button></td></tr>').join('')}}}}catch(e){console.error(e)}}
+document.getElementById('addBotForm').addEventListener('submit',async(e)=>{e.preventDefault();const r=await fetch('/api/admin/bots',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:document.getElementById('botToken').value,botName:document.getElementById('botName').value,botDescription:document.getElementById('botDescription').value})});const d=await r.json();if(d.success){alert('Bot added! Restart Docker to apply.');loadBots();bootstrap.Modal.getInstance(document.getElementById('addBotModal')).hide();document.getElementById('addBotForm').reset()}else{alert('Error: '+d.error)}})
+async function deleteBot(id){if(!confirm('Delete this bot?'))return;const r=await fetch('/api/admin/bots/'+id,{method:'DELETE'});const d=await r.json();if(d.success){alert('Bot deleted! Restart Docker to apply.');loadBots()}else{alert('Error: '+d.error)}}
+loadBots()
 </script>
-` }) %>
+</body></html>

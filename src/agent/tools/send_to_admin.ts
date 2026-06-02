@@ -1,53 +1,73 @@
 import { DynamicStructuredTool } from '@langchain/core/tools';
 import { z } from 'zod';
 import { config, logger } from '../../config.js';
-import { createLead, closeConversation } from '../../db.js';
+import { createLead, closeConversation, upsertBotContact } from '../../db.js';
 
-// Telegram Bot API instance (will be injected)
 let botApi: any = null;
+let currentUserInfo: {
+  tgId: number;
+  botLink: string;
+  username?: string;
+  firstName?: string;
+  lastName?: string;
+} | null = null;
 
-/**
- * Set the bot API instance for sending messages
- */
 export function setBotApi(api: any): void {
   botApi = api;
 }
 
-/**
- * Send to admin tool for LangChain agent
- */
+export function setUserInfo(info: {
+  tgId: number;
+  botLink: string;
+  username?: string;
+  firstName?: string;
+  lastName?: string;
+}): void {
+  currentUserInfo = info;
+}
+
 export const sendToAdminTool = new DynamicStructuredTool({
   name: 'send_to_admin',
-  description: 'Отправить заявку администраторам с резюме диалога и контактами пользователя. Вызывайте этот инструмент когда пользователь хочет оставить заявку или задать вопрос администраторам.',
+  description: 'Отправить заявку администраторам. Используйте когда пользователь хочет оставить заявку, связаться с менеджером или запросить обратную связь.',
   schema: z.object({
     summary: z.string().describe('Резюме диалога и потребности пользователя'),
-    contacts: z.string().describe('Контактные данные пользователя (телефон, email и т.д.)'),
-    username: z.string().describe('Username пользователя в Telegram (без @)'),
-    telegram_link: z.string().describe('Ссылка на профиль Telegram (https://t.me/username)'),
+    contacts: z.string().describe('Контактные данные пользователя: телефон, email (если не предоставлены — "Не предоставлены")'),
   }),
   func: async (input: unknown) => {
-    const { summary, contacts, username, telegram_link } = input as {
-      summary: string;
-      contacts: string;
-      username: string;
-      telegram_link: string;
-    };
+    const { summary, contacts } = input as { summary: string; contacts: string };
     try {
-      if (!botApi) {
-        throw new Error('Bot API not initialized');
-      }
+      if (!botApi) throw new Error('Bot API not initialized');
+      if (!currentUserInfo) throw new Error('User info not set');
 
-      const message = `📩 Новая заявка от @${username}\n\n👤 Контакты:\n${contacts || 'Не предоставлены'}\n\n📝 Резюме:\n${summary}\n\n🔗 Профиль: ${telegram_link}\n⏰ Время: ${new Date().toLocaleString('ru-RU')}`;
+      const u = currentUserInfo;
+      const fullName = [u.firstName, u.lastName].filter(Boolean).join(' ') || 'Не указано';
+      const telegramLink = u.username ? `https://t.me/${u.username}` : `tg://user?id=${u.tgId}`;
+
+      const message =
+        `📩 <b>Новая заявка</b>\n\n` +
+        `<b>👤 Пользователь:</b>\n` +
+        `ID: <code>${u.tgId}</code>\n` +
+        `Имя: ${fullName}\n` +
+        (u.username ? `Username: @${u.username}\n` : '') +
+        `Профиль: ${telegramLink}\n\n` +
+        `<b>📋 Контакты:</b>\n${contacts || 'Не предоставлены'}\n\n` +
+        `<b>📝 Резюме:</b>\n${summary}\n\n` +
+        `⏰ ${new Date().toLocaleString('ru-RU')}`;
 
       const sentMessage = await botApi.sendMessage(config.adminChatId, message, {
         parse_mode: 'HTML',
       });
 
-      logger.info({ 
-        adminChatId: config.adminChatId, 
+      logger.info({ adminChatId: config.adminChatId, messageId: sentMessage.message_id, tgId: u.tgId }, 'Lead sent to admin chat');
+
+      // Store result for saveLeadToDatabase
+      (sendToAdminTool as any).lastResult = {
         messageId: sentMessage.message_id,
-        username 
-      }, 'Lead sent to admin chat');
+        tgId: u.tgId,
+        botLink: u.botLink,
+        username: u.username,
+        telegramLink,
+      };
 
       return `Заявка успешно отправлена администраторам. Сообщение ID: ${sentMessage.message_id}`;
     } catch (error) {
@@ -57,34 +77,26 @@ export const sendToAdminTool = new DynamicStructuredTool({
   },
 });
 
-/**
- * Save lead to database after tool execution
- */
 export async function saveLeadToDatabase(params: {
   conversationId: string;
   tgId: number;
   botLink: string;
-  username?: string;
-  telegramLink?: string;
   summary: string;
-  contacts?: string;
-  telegramMessageId: number;
 }): Promise<void> {
   try {
+    const last = (sendToAdminTool as any).lastResult || {};
     await createLead({
       conversationId: params.conversationId,
       tgId: params.tgId,
       botLink: params.botLink,
-      username: params.username,
-      telegramLink: params.telegramLink,
+      username: last.username || currentUserInfo?.username,
+      telegramLink: last.telegramLink,
       summary: params.summary,
-      contacts: params.contacts,
-      telegramMessageId: params.telegramMessageId,
+      contacts: '',
+      telegramMessageId: last.messageId || 0,
     });
 
-    // Close conversation as escalated
     await closeConversation(params.conversationId, 'escalated');
-
     logger.info({ conversationId: params.conversationId }, 'Lead saved to database');
   } catch (error) {
     logger.error({ error }, 'Failed to save lead to database');

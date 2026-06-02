@@ -3,7 +3,7 @@ import { createReactAgent } from '@langchain/langgraph/prebuilt';
 import { SystemMessage, HumanMessage } from '@langchain/core/messages';
 import { config, logger } from '../config.js';
 import { loadSystemPrompt } from './system_prompt.js';
-import { sendToAdminTool, setBotApi, saveLeadToDatabase } from './tools/send_to_admin.js';
+import { sendToAdminTool, setBotApi, setUserInfo, saveLeadToDatabase } from './tools/send_to_admin.js';
 import { PostgresChatMessageHistory } from './memory.js';
 import { saveMessage } from '../db.js';
 
@@ -71,6 +71,9 @@ export async function runAgent(
     // Create agent
     const agent = await createAgent(botApi);
 
+    // Pass real user info to the tool (bypasses LLM for profile data)
+    setUserInfo(userInfo);
+
     // Prepare input messages
     const inputMessages = [
       new SystemMessage(systemPrompt),
@@ -101,11 +104,7 @@ export async function runAgent(
         conversationId,
         tgId: userInfo.tgId,
         botLink: userInfo.botLink,
-        username: userInfo.username,
-        telegramLink: userInfo.username ? `https://t.me/${userInfo.username}` : undefined,
-        summary: userMessage.substring(0, 500), // Will be overridden by tool
-        contacts: '',
-        telegramMessageId: 0, // Will be updated by tool
+        summary: userMessage.substring(0, 500),
       });
 
       logger.info({ conversationId }, 'Lead created via agent tool call');

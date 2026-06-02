@@ -25,7 +25,7 @@ export async function startAdminServer(): Promise<import('http').Server> {
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: process.env.NODE_ENV === 'production',
+      secure: false,
       httpOnly: true,
       maxAge: config.adminSessionMaxAge,
       sameSite: 'lax',

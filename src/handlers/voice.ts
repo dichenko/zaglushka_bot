@@ -5,7 +5,8 @@ import {
   createConversation, 
   getActiveConversation, 
   saveMessage,
-  updateConversationActivity 
+  updateConversationActivity,
+  getBotFirstMessage,
 } from '../db.js';
 import { logger } from '../config.js';
 
@@ -47,6 +48,12 @@ export async function handleVoiceMessage(ctx: Context, botInfo: { botLink: strin
         id: await createConversation(tgId, botInfo.botLink),
         status: 'active',
       };
+
+      const firstMsg = await getBotFirstMessage(botInfo.botLink);
+      if (firstMsg) {
+        await saveMessage(conversation.id, 'assistant', firstMsg);
+      }
+
       logger.info({ conversationId: conversation.id, tgId }, 'New conversation created for voice message');
     }
 

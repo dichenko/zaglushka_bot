@@ -4,7 +4,9 @@ import {
   upsertBotContact, 
   getActiveBots, 
   getBotFirstMessage,
-  syncBotLink 
+  syncBotLink,
+  getActiveConversation,
+  closeConversation,
 } from "./db.js";
 import { handleTextMessage } from "./handlers/message.js";
 import { handleVoiceMessage } from "./handlers/voice.js";
@@ -67,6 +69,13 @@ export async function startBots(): Promise<void> {
         const from = ctx.from!;
 
         try {
+          // Close any active conversation to reset dialog history
+          const activeConv = await getActiveConversation(tgId, botLink);
+          if (activeConv) {
+            await closeConversation(activeConv.id, 'completed');
+            logger.info({ tgId, botLink, convId: activeConv.id }, 'Conversation closed by /start');
+          }
+
           // Save contact
           await upsertBotContact({ 
             tgId, 
@@ -84,6 +93,26 @@ export async function startBots(): Promise<void> {
           logger.info({ tgId, botLink }, 'Start command handled');
         } catch (err) {
           logger.error({ err, tgId, botLink }, "Failed to handle /start command");
+        }
+      });
+
+      // /restart command handler - clears dialog history
+      bot.command("restart", async (ctx) => {
+        const tgId = ctx.from?.id;
+        if (!tgId) return;
+
+        try {
+          const activeConv = await getActiveConversation(tgId, botLink);
+          if (activeConv) {
+            await closeConversation(activeConv.id, 'completed');
+            logger.info({ tgId, botLink, convId: activeConv.id }, 'Conversation closed by /restart');
+          }
+
+          const firstMessage = botConfig.first_message || await getBotFirstMessage(botLink) || "Здравствуйте! Чем могу помочь?";
+          await ctx.reply(firstMessage);
+          logger.info({ tgId, botLink }, 'Restart command handled');
+        } catch (err) {
+          logger.error({ err, tgId, botLink }, 'Failed to handle /restart command');
         }
       });
 

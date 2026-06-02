@@ -4,7 +4,8 @@ import {
   createConversation, 
   getActiveConversation, 
   saveMessage,
-  updateConversationActivity 
+  updateConversationActivity,
+  getBotFirstMessage,
 } from '../db.js';
 import { logger } from '../config.js';
 
@@ -32,6 +33,13 @@ export async function handleTextMessage(ctx: Context, botInfo: { botLink: string
         id: await createConversation(tgId, botInfo.botLink),
         status: 'active',
       };
+
+      // Inject bot first_message as initial assistant message for LLM context
+      const firstMsg = await getBotFirstMessage(botInfo.botLink);
+      if (firstMsg) {
+        await saveMessage(conversation.id, 'assistant', firstMsg);
+      }
+
       logger.info({ conversationId: conversation.id, tgId }, 'New conversation created');
     }
 

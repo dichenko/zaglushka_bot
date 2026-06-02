@@ -88,7 +88,8 @@ export async function transcribeVoice(
     
     throw new Error('All STT providers failed');
   } catch (error) {
-    logger.error({ error }, 'Voice transcription failed');
+    const details = error instanceof Error ? { message: error.message, stack: error.stack } : { error };
+    logger.error(details, 'Voice transcription failed');
     throw new Error('Не удалось распознать голосовое сообщение. Пожалуйста, напишите текстом.');
   }
 }

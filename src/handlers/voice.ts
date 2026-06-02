@@ -90,7 +90,8 @@ export async function handleVoiceMessage(ctx: Context, botInfo: { botLink: strin
       transcriptionLength: transcription.length 
     }, 'Voice message handled');
   } catch (error) {
-    logger.error({ error }, 'Failed to handle voice message');
+    const details = error instanceof Error ? { message: error.message, stack: error.stack } : { error };
+    logger.error(details, 'Failed to handle voice message');
     await ctx.reply('Не удалось распознать голосовое сообщение. Пожалуйста, напишите текстом.');
   }
 }

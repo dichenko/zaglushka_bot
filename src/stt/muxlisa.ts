@@ -34,7 +34,8 @@ export async function transcribeWithMuxlisa(
       confidence: data.confidence || 0.8,
     };
   } catch (error) {
-    logger.error({ error, provider: 'muxlisa' }, 'MUXLISA STT failed');
+    const details = error instanceof Error ? { message: error.message, status: (error as any).status } : { error };
+    logger.error(details, 'MUXLISA STT failed');
     throw error;
   }
 }

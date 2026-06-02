@@ -41,7 +41,8 @@ export async function transcribeWithOpenAI(
       confidence: 0.9, // OpenAI doesn't provide confidence, assume high
     };
   } catch (error) {
-    logger.error({ error, provider: 'openai' }, 'OpenAI STT failed');
+    const details = error instanceof Error ? { message: error.message, status: (error as any).status } : { error };
+    logger.error(details, 'OpenAI STT failed');
     throw error;
   }
 }

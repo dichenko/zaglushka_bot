@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Panel - <%= title %></title>
+  <title>Admin Panel - <%- title %></title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
     body { padding-top: 20px; }
@@ -19,16 +19,16 @@
         <hr>
         <ul class="nav flex-column">
           <li class="nav-item">
-            <a class="nav-link <%= title === 'System Prompt' ? 'active' : '' %>" href="/admin/prompt">System Prompt</a>
+            <a class="nav-link <%- active === 'prompt' ? 'active' : '' %>" href="/admin/prompt">System Prompt</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link <%= title === 'First Message' ? 'active' : '' %}" href="/admin/first-message">First Message</a>
+            <a class="nav-link <%- active === 'first-message' ? 'active' : '' %>" href="/admin/first-message">First Message</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link <%= title === 'Telegram Bots' ? 'active' : '' %>" href="/admin/bots">TG Bots</a>
+            <a class="nav-link <%- active === 'bots' ? 'active' : '' %>" href="/admin/bots">TG Bots</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link <%= title === 'Conversation History' ? 'active' : '' %}" href="/admin/conversations">Conversations</a>
+            <a class="nav-link <%- active === 'conversations' ? 'active' : '' %>" href="/admin/conversations">Conversations</a>
           </li>
           <li class="nav-item mt-3">
             <a class="nav-link text-danger" href="/admin/logout">Logout</a>
@@ -36,12 +36,5 @@
         </ul>
       </div>
       <div class="col-md-10 p-4">
-        <h2><%= title %></h2>
+        <h2><%- title %></h2>
         <hr>
-        <%- body %>
-      </div>
-    </div>
-  </div>
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>

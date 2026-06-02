@@ -48,7 +48,11 @@ export async function transcribeVoice(
   try {
     // Download file from Telegram
     const file = await bot.api.getFile(audioFileId);
-    const fileUrl = file.url(bot.api.token);
+    const filePath = file.file_path;
+    if (!filePath) {
+      throw new Error('No file_path returned from Telegram');
+    }
+    const fileUrl = `https://api.telegram.org/file/bot${bot.api.token}/${filePath}`;
     const response = await fetch(fileUrl);
     
     if (!response.ok) {

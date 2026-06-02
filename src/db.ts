@@ -60,6 +60,15 @@ export async function runMigrations(): Promise<void> {
   } catch (err) {
     logger.error({ err }, "Failed to apply migration 002_ai_agent");
   }
+
+  const sql003 = readFileSync(join(migrationsDir, "003_per_bot_message.sql"), "utf-8");
+
+  try {
+    await pool.query(sql003);
+    logger.info("Migration 003_per_bot_message applied");
+  } catch (err) {
+    logger.error({ err }, "Failed to apply migration 003_per_bot_message");
+  }
 }
 
 export async function upsertBotContact(params: {
@@ -94,10 +103,11 @@ export async function getActiveBots(): Promise<Array<{
   bot_link: string | null;
   bot_name: string | null;
   bot_description: string | null;
+  first_message: string | null;
   is_active: boolean;
 }>> {
   const result = await pool.query(
-    'SELECT id, token, bot_link, bot_name, bot_description, is_active FROM bot_configs WHERE is_active = true'
+    'SELECT id, token, bot_link, bot_name, bot_description, first_message, is_active FROM bot_configs WHERE is_active = true'
   );
   return result.rows;
 }
@@ -106,10 +116,11 @@ export async function createBot(data: {
   token: string;
   bot_name?: string;
   bot_description?: string;
+  first_message?: string;
 }): Promise<void> {
   await pool.query(
-    'INSERT INTO bot_configs (token, bot_name, bot_description) VALUES ($1, $2, $3)',
-    [data.token, data.bot_name, data.bot_description]
+    'INSERT INTO bot_configs (token, bot_name, bot_description, first_message) VALUES ($1, $2, $3, $4)',
+    [data.token, data.bot_name, data.bot_description, data.first_message]
   );
 }
 
@@ -117,6 +128,7 @@ export async function updateBot(id: number, data: {
   token?: string;
   bot_name?: string;
   bot_description?: string;
+  first_message?: string;
   is_active?: boolean;
 }): Promise<void> {
   const fields: string[] = [];
@@ -134,6 +146,10 @@ export async function updateBot(id: number, data: {
   if (data.bot_description !== undefined) {
     fields.push(`bot_description = $${paramIndex++}`);
     values.push(data.bot_description);
+  }
+  if (data.first_message !== undefined) {
+    fields.push(`first_message = $${paramIndex++}`);
+    values.push(data.first_message);
   }
   if (data.is_active !== undefined) {
     fields.push(`is_active = $${paramIndex++}`);
@@ -154,6 +170,14 @@ export async function deleteBot(id: number): Promise<void> {
     'UPDATE bot_configs SET is_active = false, updated_at = now() WHERE id = $1',
     [id]
   );
+}
+
+export async function getBotFirstMessage(botLink: string): Promise<string | null> {
+  const result = await pool.query(
+    'SELECT first_message FROM bot_configs WHERE bot_link = $1 AND is_active = true',
+    [botLink]
+  );
+  return result.rows[0]?.first_message || null;
 }
 
 export async function syncBotLink(id: number, botLink: string): Promise<void> {

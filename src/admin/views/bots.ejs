@@ -18,7 +18,6 @@ body { padding-top: 20px; }
   <h5>Admin Panel</h5><hr>
   <ul class="nav flex-column">
     <li class="nav-item"><a class="nav-link" href="/admin/prompt">System Prompt</a></li>
-    <li class="nav-item"><a class="nav-link" href="/admin/first-message">First Message</a></li>
     <li class="nav-item"><a class="nav-link active" href="/admin/bots">TG Bots</a></li>
     <li class="nav-item"><a class="nav-link" href="/admin/conversations">Conversations</a></li>
     <li class="nav-item mt-3"><a class="nav-link text-danger" href="/admin/logout">Logout</a></li>
@@ -31,7 +30,7 @@ body { padding-top: 20px; }
   <div class="card-body">
     <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addBotModal">Add New Bot</button>
     <div class="alert alert-warning mt-3">
-      <strong>Note:</strong> After adding or modifying bots, restart Docker for changes to take effect:
+      <strong>Note:</strong> After adding or modifying bots, restart Docker:
       <code>docker compose restart app</code>
     </div>
   </div>
@@ -40,14 +39,15 @@ body { padding-top: 20px; }
 <div class="card">
   <div class="card-body">
     <table class="table table-striped">
-      <thead><tr><th>ID</th><th>Token</th><th>Bot Link</th><th>Name</th><th>Status</th><th>Actions</th></tr></thead>
+      <thead><tr><th>ID</th><th>Token</th><th>Bot Link</th><th>Name</th><th>First Message</th><th>Status</th><th>Actions</th></tr></thead>
       <tbody id="botsTableBody">
-        <tr><td colspan="6" class="text-center">Loading...</td></tr>
+        <tr><td colspan="7" class="text-center">Loading...</td></tr>
       </tbody>
     </table>
   </div>
 </div>
 
+<!-- Add Bot Modal -->
 <div class="modal fade" id="addBotModal" tabindex="-1">
   <div class="modal-dialog">
     <div class="modal-content">
@@ -58,14 +58,50 @@ body { padding-top: 20px; }
       <div class="modal-body">
         <form id="addBotForm">
           <div class="mb-3">
-            <label for="botToken" class="form-label">Bot Token</label>
-            <input type="text" class="form-control" id="botToken" required>
+            <label class="form-label">Bot Token</label>
+            <input type="text" class="form-control" name="token" required>
           </div>
           <div class="mb-3">
-            <label for="botName" class="form-label">Bot Name (optional)</label>
-            <input type="text" class="form-control" id="botName">
+            <label class="form-label">Bot Name (optional)</label>
+            <input type="text" class="form-control" name="botName">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">First Message (optional)</label>
+            <textarea class="form-control" name="firstMessage" rows="3"></textarea>
+            <div class="form-text">Sent when user sends /start</div>
           </div>
           <button type="submit" class="btn btn-primary">Add Bot</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Bot Modal -->
+<div class="modal fade" id="editBotModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Bot</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="editBotForm">
+          <input type="hidden" name="id">
+          <div class="mb-3">
+            <label class="form-label">Bot Token</label>
+            <input type="text" class="form-control" name="token">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Bot Name</label>
+            <input type="text" class="form-control" name="botName">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">First Message</label>
+            <textarea class="form-control" name="firstMessage" rows="3"></textarea>
+            <div class="form-text">Sent when user sends /start. Empty = default greeting.</div>
+          </div>
+          <button type="submit" class="btn btn-primary">Save Changes</button>
         </form>
       </div>
     </div>
@@ -75,23 +111,34 @@ body { padding-top: 20px; }
 </div></div></div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+var allBots = [];
+
 async function loadBots() {
   try {
-    var response = await fetch('/api/admin/bots');
-    var data = await response.json();
+    var resp = await fetch('/api/admin/bots');
+    var data = await resp.json();
     if (data.success) {
+      allBots = data.bots;
       var tbody = document.getElementById('botsTableBody');
       if (data.bots.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center">No bots configured</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center">No bots configured</td></tr>';
       } else {
         tbody.innerHTML = data.bots.map(function(bot) {
+          var tokenMask = bot.token.substring(0, 10) + '...' + bot.token.substring(bot.token.length - 5);
+          var botLink = bot.bot_link ? '<a href="' + bot.bot_link + '" target="_blank">' + bot.bot_link + '</a>' : 'Not set';
+          var status = bot.is_active ? '<span class="badge bg-success">Active</span>' : '<span class="badge bg-danger">Inactive</span>';
+          var firstMsg = bot.first_message || '-';
           return '<tr>' +
             '<td>' + bot.id + '</td>' +
-            '<td><code>' + bot.token.substring(0, 10) + '...' + bot.token.substring(bot.token.length - 5) + '</code></td>' +
-            '<td>' + (bot.bot_link ? '<a href="' + bot.bot_link + '" target="_blank">' + bot.bot_link + '</a>' : 'Not set') + '</td>' +
+            '<td><code>' + tokenMask + '</code></td>' +
+            '<td>' + botLink + '</td>' +
             '<td>' + (bot.bot_name || '-') + '</td>' +
-            '<td>' + (bot.is_active ? '<span class="badge bg-success">Active</span>' : '<span class="badge bg-danger">Inactive</span>') + '</td>' +
-            '<td><button class="btn btn-sm btn-danger" onclick="deleteBot(' + bot.id + ')">Delete</button></td>' +
+            '<td>' + (firstMsg.length > 40 ? firstMsg.substring(0, 40) + '...' : firstMsg) + '</td>' +
+            '<td>' + status + '</td>' +
+            '<td>' +
+              '<button class="btn btn-sm btn-primary me-1" onclick="openEdit(' + bot.id + ')">Edit</button>' +
+              '<button class="btn btn-sm btn-danger" onclick="deleteBot(' + bot.id + ')">Delete</button>' +
+            '</td>' +
           '</tr>';
         }).join('');
       }
@@ -101,26 +148,71 @@ async function loadBots() {
   }
 }
 
-document.getElementById('addBotForm').addEventListener('submit', async function(e) {
+function openEdit(id) {
+  var bot = allBots.find(function(b) { return b.id === id; });
+  if (!bot) return;
+
+  var form = document.getElementById('editBotForm');
+  form.elements['id'].value = bot.id;
+  form.elements['token'].value = bot.token;
+  form.elements['botName'].value = bot.bot_name || '';
+  form.elements['firstMessage'].value = bot.first_message || '';
+
+  var modal = new bootstrap.Modal(document.getElementById('editBotModal'));
+  modal.show();
+}
+
+document.getElementById('editBotForm').addEventListener('submit', async function(e) {
   e.preventDefault();
-  var token = document.getElementById('botToken').value.trim();
-  var botName = document.getElementById('botName').value.trim();
-  
-  if (!token) return;
+  var id = this.elements['id'].value;
+  var body = {
+    token: this.elements['token'].value.trim(),
+    botName: this.elements['botName'].value.trim(),
+    firstMessage: this.elements['firstMessage'].value.trim(),
+  };
 
   try {
-    var response = await fetch('/api/admin/bots', {
+    var resp = await fetch('/api/admin/bots/' + id, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    var data = await resp.json();
+    if (data.success) {
+      alert('Bot updated! Restart Docker to apply changes.');
+      loadBots();
+      bootstrap.Modal.getInstance(document.getElementById('editBotModal')).hide();
+    } else {
+      alert('Error: ' + data.error);
+    }
+  } catch (e) {
+    alert('Failed to update bot');
+    console.error(e);
+  }
+});
+
+document.getElementById('addBotForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  var form = this;
+  var body = {
+    token: form.elements['token'].value.trim(),
+    botName: form.elements['botName'].value.trim(),
+    firstMessage: form.elements['firstMessage'].value.trim(),
+  };
+  if (!body.token) return;
+
+  try {
+    var resp = await fetch('/api/admin/bots', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: token, botName: botName })
+      body: JSON.stringify(body)
     });
-    var data = await response.json();
+    var data = await resp.json();
     if (data.success) {
       alert('Bot added! Restart Docker to apply changes.');
       loadBots();
-      var modal = bootstrap.Modal.getInstance(document.getElementById('addBotModal'));
-      if (modal) modal.hide();
-      document.getElementById('addBotForm').reset();
+      bootstrap.Modal.getInstance(document.getElementById('addBotModal')).hide();
+      form.reset();
     } else {
       alert('Error: ' + data.error);
     }
@@ -133,8 +225,8 @@ document.getElementById('addBotForm').addEventListener('submit', async function(
 async function deleteBot(id) {
   if (!confirm('Are you sure you want to delete this bot?')) return;
   try {
-    var response = await fetch('/api/admin/bots/' + id, { method: 'DELETE' });
-    var data = await response.json();
+    var resp = await fetch('/api/admin/bots/' + id, { method: 'DELETE' });
+    var data = await resp.json();
     if (data.success) {
       alert('Bot deleted! Restart Docker to apply changes.');
       loadBots();

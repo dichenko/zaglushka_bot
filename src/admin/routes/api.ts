@@ -7,6 +7,7 @@ import {
   updateFirstMessage,
   getActiveBots,
   createBot,
+  updateBot,
   deleteBot,
   getConversations,
   getMessagesByConversation
@@ -115,7 +116,7 @@ router.get('/bots', async (req, res) => {
 
 router.post('/bots', async (req, res) => {
   try {
-    const { token, botName, botDescription } = req.body;
+    const { token, botName, botDescription, firstMessage } = req.body;
     
     if (!token || token.trim().length === 0) {
       return res.status(400).json({ success: false, error: 'Token is required' });
@@ -124,7 +125,8 @@ router.post('/bots', async (req, res) => {
     await createBot({
       token,
       bot_name: botName,
-      bot_description: botDescription
+      bot_description: botDescription,
+      first_message: firstMessage,
     });
     
     logger.info({ adminTgId: req.session.adminTgId }, 'New bot created');
@@ -155,6 +157,33 @@ router.delete('/bots/:id', async (req, res) => {
   } catch (error) {
     logger.error({ error }, 'Failed to delete bot');
     res.status(500).json({ success: false, error: 'Failed to delete bot' });
+  }
+});
+
+router.put('/bots/:id', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ success: false, error: 'Invalid bot ID' });
+    }
+
+    const { token, botName, botDescription, firstMessage } = req.body;
+
+    await updateBot(id, {
+      token: token || undefined,
+      bot_name: botName,
+      bot_description: botDescription,
+      first_message: firstMessage,
+    });
+
+    logger.info({ adminTgId: req.session.adminTgId, botId: id }, 'Bot updated');
+    res.json({ success: true });
+  } catch (error: any) {
+    logger.error({ error }, 'Failed to update bot');
+    if (error.code === '23505') {
+      return res.status(400).json({ success: false, error: 'Bot token already exists' });
+    }
+    res.status(500).json({ success: false, error: 'Failed to update bot' });
   }
 });
 

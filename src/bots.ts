@@ -3,7 +3,7 @@ import { config, logger } from "./config.js";
 import { 
   upsertBotContact, 
   getActiveBots, 
-  getActiveFirstMessage,
+  getBotFirstMessage,
   syncBotLink 
 } from "./db.js";
 import { handleTextMessage } from "./handlers/message.js";
@@ -76,11 +76,10 @@ export async function startBots(): Promise<void> {
             lastName: from.last_name,
           });
 
-          // Get first message from database
-          const firstMessage = await getActiveFirstMessage();
-          const message = firstMessage || "Здравствуйте! Чем могу помочь?";
+          // Get per-bot first message, fallback to global, fallback to default
+          const firstMessage = botConfig.first_message || await getBotFirstMessage(botLink) || "Здравствуйте! Чем могу помочь?";
           
-          await ctx.reply(message);
+          await ctx.reply(firstMessage);
           
           logger.info({ tgId, botLink }, 'Start command handled');
         } catch (err) {

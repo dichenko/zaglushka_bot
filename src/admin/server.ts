@@ -80,10 +80,6 @@ export async function startAdminServer(): Promise<import('http').Server> {
     res.render('prompt', { title: 'System Prompt' });
   });
 
-  app.get('/admin/first-message', requireAuth, (req, res) => {
-    res.render('first-message', { title: 'First Message' });
-  });
-
   app.get('/admin/bots', requireAuth, (req, res) => {
     res.render('bots', { title: 'Telegram Bots' });
   });

@@ -149,7 +149,9 @@ async function loadBots() {
 }
 
 function openEdit(id) {
-  var bot = allBots.find(function(b) { return b.id === id; });
+  console.log('openEdit', id);
+  var bot = allBots.find(function(b) { return b.id == id; });
+  console.log('found bot', bot);
   if (!bot) return;
 
   var form = document.getElementById('editBotForm');

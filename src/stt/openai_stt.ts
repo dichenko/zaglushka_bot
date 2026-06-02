@@ -20,7 +20,7 @@ export async function transcribeWithOpenAI(
       formData.append('language', language);
     }
 
-    const response = await fetch(`${config.llmBaseUrl}/audio/transcriptions`, {
+    const response = await fetch(`${config.openaiBaseUrl}/audio/transcriptions`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${config.openaiApiKey}`,

@@ -34,6 +34,7 @@ interface AppConfig {
   muxlisaTtsMaxChars: number;
   muxlisaTtsSpeaker: number;
   openaiSttModel: string;
+  openaiBaseUrl: string;
   openaiApiKey: string;
   sttFallbackConfidenceThreshold: number;
   sttMaxRetries: number;
@@ -109,6 +110,7 @@ function loadConfig(): AppConfig {
 
   // STT Configuration - OpenAI
   const openaiSttModel = process.env.OPENAI_STT_MODEL || "gpt-4o-transcribe";
+  const openaiBaseUrl = process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";
   const openaiApiKey = process.env.OPENAI_API_KEY || "";
 
   // STT Fallback settings
@@ -157,6 +159,7 @@ function loadConfig(): AppConfig {
     muxlisaTtsMaxChars,
     muxlisaTtsSpeaker,
     openaiSttModel,
+    openaiBaseUrl,
     openaiApiKey,
     sttFallbackConfidenceThreshold,
     sttMaxRetries,

@@ -18,7 +18,15 @@
             <% if (error) { %>
               <div class="alert alert-danger"><%= error %></div>
             <% } %>
-            <p class="text-muted">To access the admin panel, send <code>/admin</code> command in Telegram bot.</p>
+            <% if (token) { %>
+              <form method="post" action="/admin/login">
+                <input type="hidden" name="token" value="<%= token %>">
+                <p class="text-muted">Click the button below to enter the admin panel.</p>
+                <button type="submit" class="btn btn-primary w-100">Login</button>
+              </form>
+            <% } else { %>
+              <p class="text-muted">To access the admin panel, send <code>/admin</code> command in Telegram bot.</p>
+            <% } %>
           </div>
         </div>
       </div>

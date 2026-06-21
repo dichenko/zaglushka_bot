@@ -1,4 +1,4 @@
-import { createAdminToken, validateAdminToken, isAdmin } from '../db.js';
+import { checkAdminToken, consumeAdminToken, createAdminToken } from '../db.js';
 import { config, logger } from '../config.js';
 
 /**
@@ -21,12 +21,28 @@ export async function generateAdminLoginLink(tgId: number): Promise<string> {
 }
 
 /**
- * Validate token and create session
+ * Validate token without consuming it.
+ * @param token - Admin token
+ * @returns Telegram ID if valid, null otherwise
+ */
+export async function previewAdminLogin(token: string): Promise<number | null> {
+  const tgId = await checkAdminToken(token);
+
+  if (!tgId) {
+    logger.warn({ token }, 'Invalid or expired admin token preview');
+    return null;
+  }
+
+  return tgId;
+}
+
+/**
+ * Consume token and create session
  * @param token - Admin token
  * @returns Telegram ID if valid, null otherwise
  */
 export async function processAdminLogin(token: string): Promise<number | null> {
-  const tgId = await validateAdminToken(token);
+  const tgId = await consumeAdminToken(token);
   
   if (!tgId) {
     logger.warn({ token }, 'Invalid or expired admin token');

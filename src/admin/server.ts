@@ -4,7 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { config, logger } from '../config.js';
 import { requireAuth } from './middleware/auth.js';
-import { processAdminLogin } from './auth.js';
+import { previewAdminLogin, processAdminLogin } from './auth.js';
 import apiRouter from './routes/api.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -44,13 +44,29 @@ export async function startAdminServer(): Promise<import('http').Server> {
     const token = req.query.token as string;
     
     if (!token) {
-      return res.render('login', { error: 'No token provided' });
+      return res.render('login', { error: 'No token provided', token: null });
+    }
+
+    const tgId = await previewAdminLogin(token);
+    
+    if (!tgId) {
+      return res.render('login', { error: 'Invalid or expired token', token: null });
+    }
+
+    return res.render('login', { error: null, token });
+  });
+
+  app.post('/admin/login', async (req, res) => {
+    const token = req.body.token as string;
+
+    if (!token) {
+      return res.render('login', { error: 'No token provided', token: null });
     }
 
     const tgId = await processAdminLogin(token);
-    
+
     if (!tgId) {
-      return res.render('login', { error: 'Invalid or expired token' });
+      return res.render('login', { error: 'Invalid or expired token', token: null });
     }
 
     // Create session

@@ -275,7 +275,7 @@ export async function createAdminToken(tgId: number): Promise<string> {
   return result.rows[0].token;
 }
 
-export async function validateAdminToken(token: string): Promise<number | null> {
+export async function checkAdminToken(token: string): Promise<number | null> {
   const result = await pool.query(
     `SELECT tg_id FROM admin_tokens 
      WHERE token = $1 AND used = false AND expires_at > now()`,
@@ -285,13 +285,23 @@ export async function validateAdminToken(token: string): Promise<number | null> 
   if (result.rows.length === 0) {
     return null;
   }
-  
-  // Mark token as used
-  await pool.query(
-    'UPDATE admin_tokens SET used = true WHERE token = $1',
+
+  return result.rows[0].tg_id;
+}
+
+export async function consumeAdminToken(token: string): Promise<number | null> {
+  const result = await pool.query(
+    `UPDATE admin_tokens
+     SET used = true
+     WHERE token = $1 AND used = false AND expires_at > now()
+     RETURNING tg_id`,
     [token]
   );
   
+  if (result.rows.length === 0) {
+    return null;
+  }
+
   return result.rows[0].tg_id;
 }
 
